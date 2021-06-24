@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Outro</title>
+		<meta charset="UTF-8">
+	</head>
+	<body>
+		<div id="viewport"></div>
+		<script src="./utils/three.js"></script>
+		<script type="module" src="./utils/OBJLoader.js"></script>
+		<script type="text/javascript">
+			var personaggio, chest, scroll;
+			
+			var END = false;
+				
+			var testa, tronco,
+				braccioDX, braccioSX, 
+				avambraccioDX, avambraccioSX, 
+				gambaDX, gambaSX, 
+				stincoDX, stincoSX,
+				bracciaDX, bracciaSX, 
+				gambeDX, gambeSX;
+
+			var geometry, material;
+			var camera, scene, renderer, loader;
+			var texture;
+
+			var ambientLight; 
+			var rotationLimbs=0.03;
+			
+			var scrollUp = false, scrollTaken = false;
+			
+			var soundFootstep, soundtrack, audioLoader;
+
+			var canvasW=window.innerWidth, canvasH=window.innerHeight;
+			document.addEventListener( 'keydown', onDocumentKeyDown, false );
+			document.addEventListener( 'keyup', onDocumentKeyUp, false );
+
+			var leftIsDown  = false,
+				upIsDown    = false,
+				rightIsDown = false,
+				downIsDown  = false,
+
+				wIsDown = false,
+				aIsDown = false,
+				dIsDown = false,
+				sIsDown = false,
+				
+				spaceIsDown = false,
+				qIsDown = false,
+				zIsDown = false,
+
+				oneIsDown = false,
+				twoIsDown = false;
+
+			window.onload = function init() {
+				
+					renderer = new THREE.WebGLRenderer({ antialias: true });
+					renderer.setSize( canvasW, canvasH );
+					document.getElementById( 'viewport' ).appendChild( renderer.domElement );
+					
+					scene = new THREE.Scene;
+					scene.background =  new THREE.TextureLoader().load('images/landscape.jpg');
+
+					var listener = new THREE.AudioListener();
+
+					camera = new THREE.PerspectiveCamera(
+						45,
+						canvasW/canvasH,
+						0.1,
+						1000
+					);
+					camera.position.set( 0.7, 1, 6 );
+					camera.rotation.x = -0.15;
+					camera.add( listener );
+					scene.add( camera );
+
+					
+					personaggio = new THREE.Object3D;
+					chest = new THREE.Object3D;
+					scroll = new THREE.Object3D;
+					
+					soundFootstep = new THREE.Audio( listener );
+					soundtrack = new THREE.Audio( listener );
+
+					audioLoader = new THREE.AudioLoader();
+					audioLoader.load( 'sound/Victory.mp3', function( buffer ) {
+						soundtrack.setBuffer( buffer );
+						soundtrack.setLoop( true );
+						soundtrack.setVolume( 0.5 );
+						soundtrack.play();
+					});
+					
+					audioLoader.load( 'sound/footstep.wav', function( buffer ) {
+						soundFootstep.setBuffer( buffer );
+						soundFootstep.setLoop( true );
+						soundFootstep.setVolume( 0.4 );
+						soundFootstep.play();
+					});
+					
+					character();
+					scene.add(personaggio);
+					//camera.lookAt( personaggio.position );
+					
+					texture2 = new THREE.TextureLoader().load('images/muro1.png');
+					floor1 = new THREE.Mesh(
+						new THREE.CubeGeometry( 4, 1, 15 ),
+						new THREE.MeshPhongMaterial({map:texture2})
+					);
+					floor1.position.y = -1.6;
+					floor1.position.z = -4;
+					scene.add(floor1);
+
+					roof = new THREE.Mesh(
+							new THREE.CubeGeometry( 4, 1, 15 ),
+							new THREE.MeshPhongMaterial({map:texture2})
+						);
+					roof.position.y = 3;
+					roof.position.z = -4;
+					scene.add(roof);
+
+					wallSx1 = new THREE.Mesh(
+							new THREE.CubeGeometry( 0.5, 5, 15 ),
+							new THREE.MeshPhongMaterial({map:texture2})
+						);
+					wallSx1.position.x = -2.2;
+					wallSx1.position.z = -4;
+					scene.add(wallSx1);
+
+					wallDx1 = new THREE.Mesh(
+							new THREE.CubeGeometry( 0.5, 5, 15 ),
+							new THREE.MeshPhongMaterial({map:texture2})
+						);
+					wallDx1.position.x = 2.2;
+					wallDx1.position.z = -4;
+					scene.add(wallDx1);
+					
+					floor2 = new THREE.Mesh(
+						new THREE.CubeGeometry( 11, 1, 12 ),
+						new THREE.MeshPhongMaterial({map:texture2})
+					);
+					floor2.position.y = -1.6;
+					floor2.position.z = -17.5;
+					scene.add(floor2);
+					
+					roof = new THREE.Mesh(
+						new THREE.CubeGeometry( 12, 1, 12 ),
+						new THREE.MeshPhongMaterial({map:texture2})
+					);
+					roof.position.y = 3;
+					roof.position.z = -17.5;
+					scene.add(roof);
+					
+					wallSx2 = new THREE.Mesh(
+						new THREE.CubeGeometry( 0.5, 5, 12 ),
+						new THREE.MeshPhongMaterial({map:texture2})
+					);
+					wallSx2.position.set(-5.7, 0.5, -17.5);
+					scene.add(wallSx2);
+
+					wallDx2 = new THREE.Mesh(
+							new THREE.CubeGeometry( 0.5, 5, 12 ),
+							new THREE.MeshPhongMaterial({map:texture2})
+						);
+					wallDx2.position.set(5.7, 0.5, -17.5);
+					scene.add(wallDx2);
+					
+					loader.load('mod/chest.obj',function(model){
+						//console.log(model.children.length);
+						for(var i=0; i<model.children.length; i++){
+							model.children[i].material = new THREE.MeshPhongMaterial({map:new THREE.TextureLoader().load('images/chest1.jpg')});
+						}
+						chest.add(model);
+						
+					});
+					chest.scale.set(0.008,0.01,0.01);
+					chest.position.set(0.0, -0.5, -20);
+					scene.add(chest);
+					
+					loader.load('mod/scroll.obj',function(model){
+						model.children[0].material = new THREE.MeshPhongMaterial({map:new THREE.TextureLoader().load('images/scroll2.jpg')});
+						scroll.add(model);
+						
+					});
+					scroll.scale.set(0.035,0.035,0.035);
+					scroll.position.set(0.1, -0.1, -19.8);
+					scene.add(scroll);
+					
+					platform = new THREE.Mesh(
+						new THREE.CubeGeometry( 0.5, 0.7, 0.5 ),
+						new THREE.MeshPhongMaterial({map:new THREE.TextureLoader().load('images/stone.jpg')})
+					);
+					platform.position.set(0.0 , -0.8, -20);
+					scene.add(platform);
+
+					ambientLight = new THREE.AmbientLight(0xaaaaaa, 1, 50);
+					//scene.add(ambientLight);
+					
+					light1 = new THREE.PointLight( 0xffffff, 1, 8 );
+					light1.position.set(1.5, 0.5, 4 );
+					scene.add(light1);
+					
+					light2 = new THREE.PointLight( 0xffffff, 1, 8 );
+					light2.position.set(-1.5, 0.5, -7 );
+					scene.add(light2);
+					
+					light3 = new THREE.PointLight( 0xffffff, 1, 7 );
+					light3.position.set(0, -0.5, -15 );
+					scene.add(light3);
+					
+					light4 = new THREE.PointLight( 0xff7f50, 1, 20 );
+					light4.position.set(0, 1.2, -19 );
+					scene.add(light4);
+
+					render();
+			};
+
+			function render() {
+				if(wIsDown){
+					camera.position.z -= 0.08;
+				}
+				if(sIsDown){
+					camera.position.z += 0.08;
+				}
+				if(aIsDown){
+					camera.position.x -= 0.08;
+				}
+				if(dIsDown){
+					camera.position.x += 0.08;
+				}
+				if(spaceIsDown){
+					camera.position.y += 0.08;
+				}
+				if(qIsDown){
+					camera.position.y -= 0.08;
+				}
+				if(personaggio.position.z > -19){
+					personaggio.position.z -= 0.05;
+					camera.position.z -= 0.05;
+					bracciaSX.rotation.x -= rotationLimbs;
+					bracciaDX.rotation.x += rotationLimbs;
+					gambeSX.rotation.x += rotationLimbs;
+					gambeDX.rotation.x -= rotationLimbs;
+								
+					if(gambeSX.rotation.x > 0.5 || gambeDX.rotation.x > 0.5) {rotationLimbs = -rotationLimbs;}
+				}
+				if(personaggio.position.z < -19 && !scrollUp){
+					bracciaSX.rotation.x = 0;
+					bracciaDX.rotation.x = 0;
+					gambeSX.rotation.x = 0;
+					gambeDX.rotation.x = 0;
+					soundFootstep.stop();
+					if(scroll.position.y < 1.2){
+						scroll.position.y += 0.018;
+					}
+					else scrollUp = true;
+				}
+				if(scrollUp){
+					if(bracciaDX.rotation.x < 2 && !scrollTaken){
+						bracciaDX.rotation.x += 0.05;
+					}
+					else scrollTaken = true;
+					
+					if(scrollTaken){
+						bracciaDX.rotation.x -= 0.02;
+						scroll.position.y -= 0.013;
+						camera.position.z -= 0.03;
+					}
+					
+				}
+				if(camera.position.z < -21 && !END){
+						END = true;
+						alert("YOU HAVE FOUND THE MASTER DEGREE! \nWell done :)");
+						location.href = "index.html";
+					}
+
+				renderer.render( scene, camera); // render the scene
+				requestAnimationFrame( render );
+			}
+			
+			function character(){
+
+				texture = new THREE.TextureLoader().load('images/Face.bmp');
+				testa = new THREE.Object3D;	//Character's HEAD
+				loader = new THREE.OBJLoader();
+				loader.load('mod/testac.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture});
+					testa.add(model);
+					testa.position.set(0, 7, 0.2);
+					
+				});
+				personaggio.add(testa);
+				
+				texture1 = new THREE.TextureLoader().load('images/metallo1.jpg');
+				tronco = new THREE.Object3D;	//Character's TORSO
+				loader.load('mod/tronco2.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					tronco.add(model);
+					
+					
+				});
+				personaggio.add(tronco);	
+				
+				bracciaDX = new THREE.Object3D; //Character's entire right ARM
+				braccioDX = new THREE.Object3D;	//Character's right UPPER ARM
+				loader.load('mod/braccioDX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					
+					braccioDX.add(model);
+					
+					bracciaDX.add(braccioDX);
+					
+				});
+				
+
+				avambraccioDX = new THREE.Object3D;	//Character's right LOWER ARM
+				loader.load('mod/avambraccioDX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					avambraccioDX.add(model);
+					avambraccioDX.position.set(0.2, -4.5, 0.8);
+					
+					bracciaDX.add(avambraccioDX);
+					bracciaDX.position.set(2.9, 5.9, 0.5);
+					
+				});
+				
+				personaggio.add(bracciaDX);
+				
+				bracciaSX = new THREE.Object3D; //Character's entire left ARM
+				braccioSX = new THREE.Object3D;	//Character's left UPPER ARM
+				loader.load('mod/braccioSX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					braccioSX.add(model);
+					
+					bracciaSX.add(braccioSX);
+				});
+				
+				
+				avambraccioSX = new THREE.Object3D;	//Character's left LOWER ARM
+				loader.load('mod/avambraccioSX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					avambraccioSX.add(model);
+					avambraccioSX.position.set(-0.2, -4.5, 0.8);
+					
+					bracciaSX.add(avambraccioSX);
+					bracciaSX.position.set(-2.9, 5.9, 0.5);
+				});
+				
+				personaggio.add(bracciaSX);
+				
+				gambeDX = new THREE.Object3D;	//Character's entire right LEG
+				gambaDX = new THREE.Object3D;	//Character's right UPPER LEG
+				loader.load('mod/gambaDX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					gambaDX.add(model);
+					
+					gambeDX.add(gambaDX);
+				});
+				
+				
+				stincoDX = new THREE.Object3D;	//Character's right LOWER LEG
+				loader.load('mod/stincoDX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					stincoDX.add(model);
+					stincoDX.position.set(0, -5.8, -1);
+					
+					gambeDX.add(stincoDX);
+					gambeDX.position.set(1.1, -0.5, 0.3);
+				});
+				personaggio.add(gambeDX);
+				
+				gambeSX = new THREE.Object3D;	//Character's entire left LEG
+				gambaSX = new THREE.Object3D;	//Character's left UPPER LEG
+				loader.load('mod/gambaDX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					gambaSX.add(model);
+					
+					gambeSX.add(gambaSX);
+					
+				});
+				
+				stincoSX = new THREE.Object3D;	//Character's left LOWER LEG
+				loader.load('mod/stincoDX.obj',function(model){
+					
+					model.children[0].material = new THREE.MeshPhongMaterial({map:texture1});
+					stincoSX.add(model);
+					stincoSX.position.set(0, -5.8, -1);
+					
+					gambeSX.add(stincoSX);
+					gambeSX.position.set(-1.1, -0.5, 0.3);
+				});
+				
+				personaggio.add(gambeSX);
+				personaggio.position.z = 4;
+				personaggio.scale.set(0.1, 0.1, 0.1);
+				
+			}
+
+			function moveLimbs(){	//Character limbs movement in the environment
+				bracciaSX.rotation.x -= rotationLimbs;
+				bracciaDX.rotation.x += rotationLimbs;
+				gambeSX.rotation.x += rotationLimbs;
+				gambeDX.rotation.x -= rotationLimbs;
+							
+				if(gambeSX.rotation.x > 0.5 || gambeDX.rotation.x > 0.5) {rotationLimbs = -rotationLimbs;}
+				soundFootstep.play();
+			}
+
+			function onDocumentKeyDown(event){
+					switch(event.keyCode){
+							case 37:  leftIsDown  =true; break;
+							case 38:  upIsDown    =true; break;
+							case 39:  rightIsDown =true; break;
+							case 40:  downIsDown  =true; break;
+							
+							case 87: wIsDown = true; break;
+							case 65: aIsDown = true; break;
+							case 83: sIsDown = true; break;
+							case 68: dIsDown = true; break;
+							
+							case 32: spaceIsDown = true; break;
+							case 81: qIsDown = true; break;
+							case 90: zIsDown = true; break;
+
+							case 49: oneIsDown = true; break;
+							case 50: twoIsDown = true; break;
+
+							
+					}
+			}
+
+			function onDocumentKeyUp( event ) {
+					switch( event.keyCode ) {
+							case 37:  leftIsDown  = false; gambeDX.rotation.x=0; gambeSX.rotation.x=0; bracciaSX.rotation.x = 0; bracciaDX.rotation.x = 0; break;
+							case 38:  upIsDown    = false; gambeDX.rotation.x=0; gambeSX.rotation.x=0; bracciaSX.rotation.x = 0; bracciaDX.rotation.x = 0; break;
+							case 39:  rightIsDown = false; gambeDX.rotation.x=0; gambeSX.rotation.x=0; bracciaSX.rotation.x = 0; bracciaDX.rotation.x = 0; break;
+							case 40:  downIsDown  = false; gambeDX.rotation.x=0; gambeSX.rotation.x=0; bracciaSX.rotation.x = 0; bracciaDX.rotation.x = 0; break;
+							
+							case 87: wIsDown = false; break;
+							case 65: aIsDown = false; break;
+							case 83: sIsDown = false; break;
+							case 68: dIsDown = false; break;
+							
+							case 32: spaceIsDown = false; break;
+							case 81: qIsDown = false; break;
+
+							case 49: oneIsDown = false; break;
+							case 50: twoIsDown = false; break;
+
+					}
+			}
+		</script>
+	</body>
+</html>
